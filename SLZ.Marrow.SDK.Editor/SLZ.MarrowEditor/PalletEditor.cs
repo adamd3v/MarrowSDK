@@ -2,6 +2,7 @@ using SLZ.Marrow;
 using UnityEngine;
 using UnityEditor;
 using SLZ.Marrow.Warehouse;
+using System.Linq;
 
 namespace SLZ.MarrowEditor
 {
@@ -30,6 +31,85 @@ namespace SLZ.MarrowEditor
             changelogProperty = serializedObject.FindProperty("_changeLogs");
 
             pallet = (Pallet)serializedObject.targetObject;
+        }
+
+        public void BulkAddCrates()
+        {
+            CrateWizard.CrateType crateType = CrateWizard.CrateType.LEVEL_CRATE;
+            foreach (var selection in Selection.objects)
+            {
+                System.Type objectType = selection.GetType();
+
+                if (objectType == typeof(Pallet))
+                {
+                    continue;
+                }
+
+                if (objectType == typeof(SceneAsset))
+                {
+                    crateType = CrateWizard.CrateType.LEVEL_CRATE;
+                }
+                else if (objectType == typeof(GameObject))
+                {
+                    if((selection as GameObject).GetComponent("SLZ.VRMK.Avatar"))
+                    {
+                        crateType = CrateWizard.CrateType.AVATAR_CRATE;
+                    }
+                    else
+                    {
+                        crateType = CrateWizard.CrateType.SPAWNABLE_CRATE;
+                    }
+                }
+
+                System.Type targetType = null;
+
+                if(crateType == CrateWizard.CrateType.LEVEL_CRATE)
+                {
+                    targetType = typeof(LevelCrate);
+                }
+                else if(crateType == CrateWizard.CrateType.AVATAR_CRATE)
+                {
+                    targetType = typeof(AvatarCrate);
+                }
+                else if(crateType == CrateWizard.CrateType.SPAWNABLE_CRATE)
+                {
+                    targetType = typeof(SpawnableCrate);
+                }
+
+                string assetPath = AssetDatabase.GetAssetPath(selection);
+                MarrowAsset crateAssetReference = null;
+
+                if(string.IsNullOrEmpty(assetPath))
+                {
+                    continue;
+                }
+
+                string guid = AssetDatabase.AssetPathToGUID(assetPath);
+                crateAssetReference = new MarrowAsset(guid);
+
+                if(crateAssetReference == null)
+                {
+                    continue;
+                }
+
+                string objectName = ObjectNames.NicifyVariableName(selection.name);
+                Crate crate = Crate.CreateCrate(targetType, pallet, objectName, crateAssetReference);
+                string palletPath = AssetDatabase.GetAssetPath(pallet);
+                palletPath = System.IO.Path.GetDirectoryName(palletPath);
+                AssetDatabase.CreateAsset(crate, palletPath + "/" + objectName + ".asset");
+
+                if(!pallet.Crates.Exists((match) => match.Barcode == crate.Barcode))
+                {
+                    pallet.Crates.Add(crate);
+                }
+
+                AssetDatabase.SaveAssets();
+                AssetDatabase.Refresh();
+
+                AssetWarehouse.Instance.LoadPalletsFromAssetDatabase(true);
+            }
+
+            AssetDatabase.Refresh();
         }
 
         public override void OnInspectorGUI()
@@ -66,7 +146,15 @@ namespace SLZ.MarrowEditor
             }
             if(GUILayout.Button(new GUIContent("Bulk Add Crates", "Bulk adds crates based on your multiple selection of objects."), GUILayout.ExpandWidth(false)))
             {
-
+                BulkAddCrates();
+            }
+            if(GUILayout.Button(new GUIContent("Refresh Pallet", "Refreshes the pallet's crate collection."), GUILayout.ExpandWidth(false)))
+            {
+                AssetDatabase.Refresh();
+            }
+            if(GUILayout.Button(new GUIContent("Prune Missing Crates", "Gets rid of missing/null crates in the list."), GUILayout.ExpandWidth(false)))
+            {
+                pallet.Crates.RemoveAll((nullCrate) => nullCrate == null);
             }
 
 

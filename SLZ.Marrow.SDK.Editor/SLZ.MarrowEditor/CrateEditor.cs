@@ -152,6 +152,23 @@ namespace SLZ.MarrowEditor
                 OnInspectorGUIPackedAssets();
             }
 
+            EditorGUILayout.LabelField("Management", EditorStyles.boldLabel);
+            using (new EditorGUI.IndentLevelScope())
+            {
+                if (GUILayout.Button("Delete Crate", GUILayout.ExpandWidth(false)))
+                {
+                    if(EditorUtility.DisplayDialog("Delete Crate", "Are you sure you want to delete the crate(s)? This action cannot be undone.", "Yes", "No"))
+                    {
+                        foreach(var selection in Selection.objects)
+                        {
+                            string path = AssetDatabase.GetAssetPath(selection);
+                            crate.Pallet.Crates.Remove(crate);
+                            AssetDatabase.DeleteAsset(path);
+                        }
+                    }
+                }
+            }
+
             serializedObject.ApplyModifiedProperties();
         }
     }
