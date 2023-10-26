@@ -64,6 +64,10 @@ namespace SLZ.MarrowEditor
             {
                 pallet.SortCrates();
             }
+            if(GUILayout.Button(new GUIContent("Bulk Add Crates", "Bulk adds crates based on your multiple selection of objects."), GUILayout.ExpandWidth(false)))
+            {
+
+            }
 
 
             LockedPropertyField(changelogProperty, false);
